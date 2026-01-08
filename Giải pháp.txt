@@ -1,0 +1,23 @@
+Kiến trúc Giải pháp Kỹ thuật (Real-time Logic)
+Để đảm bảo dữ liệu từ xe về hệ thống luôn chính xác, dự án áp dụng mô hình kết hợp giữa SignalR (truyền tin tức thời) và chiến lược Offline-first (duy trì tính sẵn sàng).
+A. Cơ chế truyền tin với SignalR
+Hub Central (Mô hình Push-based Architecture): * Khác với mô hình "Pull" truyền thống (máy khách phải liên tục gửi yêu cầu để kiểm tra dữ liệu mới), SignalR Hub thiết lập kết nối Full-duplex (song công) qua WebSocket.
+Về mặt lý thuyết: Server đóng vai trò trung tâm điều phối (Message Broker). Khi có thay đổi trạng thái từ xe, Server sẽ "đẩy" (Push) dữ liệu ngay lập tức tới các Client (Dashboard điều phối) đang lắng nghe. Điều này triệt tiêu độ trễ (Latency) và giảm tải băng thông so với việc nạp lại trang liên tục.
+Phân quyền Logic (Groups): Trong môi trường SaaS, Hub sử dụng cơ chế định danh theo CompanyID để tạo các nhóm kết nối riêng biệt, đảm bảo dữ liệu của nhà xe này không bị rò rỉ sang nhà xe khác.
+Reconnection Policy (Chiến lược duy trì trạng thái kết nối):
+Do đặc thù xe khách di chuyển qua các vùng địa lý có sóng viễn thông không ổn định, hệ thống áp dụng thuật toán Exponential Backoff (Thử lại theo hàm mũ).
+Hệ thống không cố gắng kết nối lại liên tục để tránh làm cạn kiệt tài nguyên thiết bị, mà sẽ giãn cách thời gian giữa các lần thử (ví dụ: 2s, 5s, 10s, 30s). Điều này giúp ứng dụng tự phục hồi (Self-healing) ngay khi đi vào vùng có tín hiệu mạng mà không cần sự can thiệp của tài xế.
+B. Xử lý khi mất mạng (Offline Resilience)
+Đây là điểm yếu nhất của các nhà xe chạy liên tỉnh, nơi mạng 4G thường xuyên bị ngắt quãng.
+Local Storage/IndexedDB (Cơ chế Persistence tại biên): * Hệ thống áp dụng lý thuyết Source of Truth at the Edge (Nguồn sự thật tại thiết bị đầu cuối). Khi không có kết nối, mọi hành động của tài xế được đóng gói thành các Sự kiện (Events) và lưu trữ vào cơ sở dữ liệu cục bộ của trình duyệt.
+Timestamping: Quan trọng nhất là việc gán nhãn thời gian thực tế xảy ra sự kiện ($T_{event}$) thay vì thời gian dữ liệu đến được máy chủ ($T_{server}$). Điều này đảm bảo tính chính xác cho các báo cáo lịch trình về sau.
+Queue Background Sync (Đồng bộ hóa tuần tự): * Sử dụng cơ chế hàng đợi (First-In-First-Out - FIFO) để đảm bảo tính toàn vẹn của dữ liệu. Khi mạng được khôi phục, các sự kiện sẽ được đẩy lên theo đúng thứ tự thời gian chúng đã diễn ra.
+Tính lũy đẳng (Idempotency): Lý thuyết này đảm bảo rằng nếu một bản tin bị gửi lặp lại nhiều lần (do mạng chập chờn lúc gửi), hệ thống server chỉ ghi nhận và xử lý duy nhất một lần dựa trên mã định danh của sự kiện đó, tránh sai lệch số liệu.
+C. Giải quyết xung đột đặt ghế (Race Condition)
+Trong FE-09, xung đột xảy ra khi có sự tranh chấp tài nguyên hữu hạn (ghế ngồi) từ nhiều tác nhân (nhân viên điều phối, tài xế, khách hàng trực tuyến) tại cùng một thời điểm.
+Pessimistic Locking (Cơ chế khóa độc quyền): * Dự án lựa chọn khóa bi quan thay vì khóa lạc quan (Optimistic) vì tính chất nhạy cảm của dịch vụ vận tải — khách hàng cần sự chắc chắn về chỗ ngồi ngay khi thực hiện giao dịch.
+Cơ chế giữ chỗ tạm thời (Soft Lock): Khi một nhân viên bắt đầu chọn ghế, trạng thái ghế được chuyển từ Available sang Pending. Lúc này, một Exclusive Lock (Khóa độc quyền) được thiết lập trong cơ sở dữ liệu. Mọi yêu cầu thao tác lên ghế này từ các nguồn khác sẽ bị từ chối cho đến khi khóa được giải phóng.
+Time-To-Live (TTL - Thời hạn của khóa): * Để tránh tình trạng "khóa chết" (Deadlock) khi nhân viên giữ ghế nhưng không hoàn tất giao dịch, hệ thống áp dụng cơ chế Lease/TTL. Khóa chỉ có hiệu lực trong một khoảng thời gian ngắn (5-10 phút).
+Nếu quá thời gian này mà không có xác nhận thanh toán, hệ thống sẽ tự động thực hiện lệnh Rollback (hoàn tác) trạng thái ghế về Available, đảm bảo tối ưu hóa tỷ lệ lấp đầy ghế cho nhà xe.
+
+

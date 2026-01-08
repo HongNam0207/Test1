@@ -1,0 +1,395 @@
+
+
+
+
+
+
+
+
+
+BUS360 – NỀN TẢNG QUẢN LÝ NHÀ XE KHÁCH & ĐIỀU PHỐI CHUYẾN ĐI
+Report 1 – Project BUS360 
+
+
+
+
+
+
+
+
+
+– Hanoi, August 2019 –
+Table of Contents
+I. Record of Changes	3
+II. Project Introduction	4
+1. Overview	4
+1.1 Project Information	4
+1.2 Project Team	4
+2. Product Background	4
+3. Existing Systems	5
+3.1 Vexere / Baolau / 12Go Asia	5
+3.2 Bus Management System (BMS) – Generic Bus Operation Software	6
+4. Business Opportunity	7
+5. Software Product Vision	7
+6. Project Scope & Limitations	7
+6.1 Major Features	7
+6.2 Limitations & Exclusions	10
+
+I. Record of Changes
+Date
+A*
+M, D
+In charge
+Change Description
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*A - Added M - Modified D - Deleted
+
+
+II. Project Introduction
+1. Overview
+1.1 Project Information
+Project name: BUS360 – Bus Operation Management Platform
+Project code: BUS360
+Group name: <<SWP493-G4>>
+Software type: Web-based Application (SaaS-oriented)
+1.2 Project Team
+Full Name
+Role
+Email
+  Mobile
+Tô Thanh Hải
+ Lecturer
+haitt14@fe.edu.vn
+
+
+Nguyễn Tuấn Anh
+ Leader
+anhnthe176241@fpt.edu.vn
+0335890667
+Phạm Ngọc Duyên Anh
+ BA
+anhpndhe176296@fpt.eduvn
+0915155007
+Nguyễn Hồng Nam
+ Lead Developer
+
+
+
+
+Phạm Thành Trung
+ Developer
+
+
+
+
+Lê Duy Quý
+ Developer
+quyldhe173432@fpt.edu.vn
+0966286706
+
+
+2. Product Background
+Trong những năm gần đây, nhu cầu di chuyển bằng xe khách liên tỉnh tại Việt Nam tăng trưởng mạnh. Tuy nhiên, thực tế cho thấy phần lớn các nhà xe vừa và nhỏ vẫn đang quản lý vận hành theo phương pháp thủ công hoặc rời rạc như Excel, Zalo, sổ ghi chép giấy. Điều này dẫn đến nhiều bất cập trong quản lý và điều phối.
+Hiện nay, các nền tảng như Vexere, Baolau, 12Go Asia chủ yếu tập trung vào việc hỗ trợ khách hàng tìm chuyến – đặt vé – thanh toán trực tuyến. Các hệ thống này hoạt động hiệu quả ở vai trò Customer Booking Platform, nhưng chưa giải quyết tốt bài toán quản lý nội bộ cho nhà xe.
+Những vấn đề tồn tại phổ biến gồm:
+Nhà xe không có hệ thống theo dõi tổng số xe, xe đang hoạt động hay xe đang bảo trì.
+Lịch chạy chuyến phức tạp, dễ trùng giờ, đổi xe hoặc đổi tài xế nhưng không được cập nhật đồng bộ.
+Việc đặt vé đến từ nhiều kênh (điện thoại, fanpage, nhân viên tổng đài) gây ra overbooking hoặc thất lạc thông tin.
+Công tác đón – trả khách thiếu tối ưu do không quản lý rõ điểm đón và điểm trả.
+Những bất cập trên cho thấy nhu cầu cấp thiết về một hệ thống quản lý vận hành tập trung dành riêng cho nhà xe.
+3. Existing Systems
+3.1 Vexere / Baolau / 12Go Asia
+Loại hệ thống:
+Customer Booking Platform (Nền tảng đặt vé trực tuyến)
+Link tham khảo:
+Vexere: https://vexere.com
+Baolau: https://www.baolau.com
+12Go Asia: https://12go.asia
+Đối tượng sử dụng (Actors):
+Khách hàng (Passenger)
+Nhà xe (ở mức độ hạn chế – cung cấp chuyến)
+Quản trị hệ thống
+Chức năng chính:
+Tìm kiếm chuyến xe theo tuyến, thời gian
+Hiển thị thông tin nhà xe, giá vé, loại xe
+Đặt vé và thanh toán trực tuyến
+Gửi vé điện tử cho khách hàng
+Ưu điểm:
+Giao diện thân thiện, dễ sử dụng cho khách hàng
+Mạng lưới nhà xe lớn, nhiều lựa chọn tuyến đường
+Quy trình đặt vé – thanh toán nhanh chóng
+Hạn chế:
+Không quản lý chi tiết tài nguyên nội bộ của nhà xe (xe, tài xế, bảo trì)
+Không theo dõi lịch chạy chi tiết theo từng xe/tài xế
+Không hỗ trợ điều phối nội bộ, xử lý overbooking từ nhiều kênh
+Nhà xe phụ thuộc vào nền tảng trung gian
+Kết luận:
+Các hệ thống này không phù hợp để giải quyết bài toán quản lý vận hành nội bộ, nhưng có thể tham khảo cách thiết kế luồng đặt vé, hiển thị chuyến và trải nghiệm người dùng phía khách hàng.
+3.2 Bus Management System (BMS) – Generic Bus Operation Software
+Loại hệ thống:
+Bus Operation Management System
+Link tham khảo:
+Fleet Management Systems (mô hình chung): https://www.samsara.com
+Bus Management Software overview: https://www.softwareadvice.com/fleet-management/bus-management/
+Đối tượng sử dụng (Actors):
+Chủ nhà xe
+Điều hành (Dispatcher)
+Tài xế
+Nhân viên bán vé / tổng đài
+Chức năng chính:
+Quản lý danh sách xe (trạng thái hoạt động, bảo trì)
+Quản lý tài xế và phân công ca chạy
+Lập và quản lý lịch chạy chuyến
+Theo dõi tình trạng chuyến theo thời gian thực
+Báo cáo doanh thu, chi phí, hiệu suất xe
+Ưu điểm:
+Giải quyết tốt bài toán quản lý nội bộ
+Giảm trùng lịch, nhầm lẫn xe và tài xế
+Hỗ trợ điều hành và ra quyết định
+Hạn chế:
+Giao diện thường phức tạp
+Ít tập trung vào quy trình đặt vé đa kênh
+Chi phí triển khai cao, khó tiếp cận nhà xe nhỏ
+Bài học cho hệ thống đề xuất:
+Cần module quản lý xe – tài xế – lịch chạy rõ ràng
+Phân quyền vai trò điều hành và chủ nhà xe
+4. Business Opportunity
+Thị trường xe khách liên tỉnh tại Việt Nam có số lượng lớn các nhà xe vừa và nhỏ, nhưng lại thiếu các công cụ quản lý vận hành chuyên nghiệp. Việc xây dựng BUS360 mang lại cơ hội:
+Giúp nhà xe số hóa toàn bộ quy trình quản lý và điều phối.
+Giảm sai sót trong vận hành, hạn chế overbooking và nhầm lẫn chuyến.
+Cung cấp báo cáo doanh thu và hiệu suất vận hành theo thời gian thực.
+Có tiềm năng phát triển thành nền tảng SaaS cho nhiều nhà xe cùng sử dụng.
+BUS360 không cạnh tranh trực tiếp với các nền tảng bán vé mà đóng vai trò bổ trợ, tập trung vào quản lý nội bộ và điều hành.
+5. Software Product Vision
+BUS360 là một nền tảng quản lý vận hành nhà xe khách dựa trên web, cho phép các nhà xe quản lý tập trung đội xe, tài xế, chuyến đi và đặt vé, đồng thời cung cấp hệ thống báo cáo – dashboard theo thời gian thực. Khác với các quy trình thủ công và rời rạc hiện nay, BUS360 giúp nhà xe tối ưu vận hành, giảm chi phí quản lý và nâng cao chất lượng dịch vụ.
+6. Project Scope & Limitations
+Phạm vi dự án BUS360 xác định rõ những chức năng cốt lõi mà hệ thống sẽ cung cấp nhằm giải quyết các vấn đề quản lý và điều phối vận hành của nhà xe khách vừa và nhỏ. Đồng thời, dự án cũng chủ động loại trừ một số chức năng để đảm bảo tính khả thi về thời gian, nguồn lực và mục tiêu của Capstone Project.
+Việc làm rõ phạm vi và giới hạn giúp:
+Định hướng thống nhất cho nhóm phát triển
+
+
+Thiết lập kỳ vọng thực tế cho giảng viên và các bên liên quan
+
+
+Làm cơ sở đánh giá, từ chối hoặc xem xét mở rộng các yêu cầu phát sinh ngoài phạm vi
+6.1 Major Features
+FE-01: User Access & Role-Based Management
+Hệ thống cung cấp cơ chế truy cập thông qua nền tảng web với phân quyền theo vai trò (RBAC).
+ Các vai trò chính bao gồm:
+Super Admin
+
+
+Chủ nhà xe
+
+
+Nhân viên điều phối / CSKH
+
+
+Tài xế
+
+
+Khách hàng
+Mỗi vai trò chỉ được phép truy cập và thao tác trên các chức năng phù hợp với trách nhiệm của mình, đảm bảo an toàn và nhất quán dữ liệu.
+FE-02: Bus Company & Fleet Management
+Cho phép chủ nhà xe quản lý toàn bộ thông tin liên quan đến nhà xe và đội xe, bao gồm:
+Tạo, cập nhật và quản lý danh sách xe (biển số, loại xe, số chỗ)
+
+
+Theo dõi trạng thái xe: đang hoạt động, ngưng hoạt động, bảo trì
+
+
+Xem tổng quan mức độ sử dụng đội xe
+FE-03: Driver & Staff Management
+Hệ thống hỗ trợ quản lý nguồn nhân lực vận hành:
+Thêm, chỉnh sửa và vô hiệu hóa tài khoản tài xế
+
+
+Phân công tài xế cho xe hoặc chuyến cụ thể
+
+
+Theo dõi lịch làm việc và lịch chạy chuyến của tài xế
+FE-04: Trip & Schedule Management
+Hỗ trợ nhân viên điều phối trong việc tổ chức và quản lý chuyến xe:
+Tạo chuyến theo tuyến đường, ngày giờ xuất phát
+
+
+Cấu hình điểm đón – điểm trả cho từng chuyến
+
+
+Thực hiện các nghiệp vụ điều phối như đổi xe, đổi tài xế, hủy chuyến
+
+
+Theo dõi trạng thái chuyến trong suốt quá trình vận hành
+FE-05: Centralized Ticket Booking & Passenger Management
+Cung cấp hệ thống quản lý đặt vé tập trung:
+Đặt vé cho khách hàng từ nhiều kênh nội bộ
+
+
+Quản lý danh sách hành khách theo từng chuyến
+
+
+Đổi vé, hủy vé theo nghiệp vụ vận hành
+
+
+Hạn chế tình trạng overbooking và thất lạc thông tin
+FE-06: Customer Support & Notification
+Hệ thống hỗ trợ công tác chăm sóc khách hàng:
+Nhân viên CSKH tiếp nhận và xử lý yêu cầu của khách
+
+
+Gửi thông báo tự động (Email/SMS) khi có thay đổi chuyến, hủy chuyến hoặc điều chỉnh lịch
+FE-07: Operational Dashboard & Reports
+Cung cấp dashboard trực quan cho chủ nhà xe:
+Thống kê doanh thu theo thời gian
+
+
+Số vé bán ra, vé hủy
+
+
+Tỷ lệ lấp đầy ghế
+
+
+Báo cáo theo tuyến, xe và tài xế
+FE-08: Trip Status Update from Drivers
+Cho phép tài xế được phân công chuyến cập nhật trạng thái thực tế:
+Đã xuất phát
+
+
+Đã hoàn thành chuyến
+
+
+Không đón được khách / khách không lên xe
+
+
+Trễ giờ xuất phát
+
+
+Sự cố trong quá trình di chuyển
+Các cập nhật này được:
+Gửi theo thời gian thực về hệ thống (SignalR)
+
+
+Hiển thị cho điều phối và CSKH
+
+
+Lưu làm dữ liệu báo cáo và xử lý sự cố
+FE-09: Real-Time Seat & Trip Synchronization
+Hệ thống sử dụng công nghệ real-time để:
+Đồng bộ số ghế trống khi có đặt/hủy vé
+
+
+Cập nhật trạng thái chuyến ngay khi có thay đổi
+
+
+Đảm bảo dữ liệu nhất quán giữa tài xế – điều phối – CSKH
+6.2 Limitations & Exclusions
+LI-01: BUS360 không thay thế hoàn toàn các nền tảng bán vé bên thứ ba như Vexere hoặc Baolau, mà đóng vai trò hệ thống quản lý vận hành nội bộ cho nhà xe.
+LI-02: Trong giai đoạn Capstone, hệ thống chưa tích hợp GPS hoặc theo dõi vị trí xe theo thời gian thực.
+LI-03: Hệ thống chưa hỗ trợ thanh toán trực tuyến cho khách hàng cuối trong phạm vi dự án.
+LI-04: Dữ liệu demo ban đầu được tạo thủ công bởi Admin, không kết nối với dữ liệu thực tế bên ngoài.
+
+
