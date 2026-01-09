@@ -43,23 +43,26 @@ window.updateMultiBusLocation = (tripId, lat, lng, routeName) => {
     }
 };
 
-// 4. Lấy vị trí thực tế của thiết bị (GPS trình duyệt)
+// 4. Lấy vị trí thực tế của thiết bị (GPS trình duyệt) và theo dõi vị trí thay vì lấy một lần
 window.startGPSLocation = (dotNetHelper) => {
     if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
+        // Sử dụng watchPosition để theo dõi vị trí khi di chuyển
+        navigator.geolocation.watchPosition(
             (position) => {
+                // Gửi tọa độ về hàm C# có tên 'UpdateRealLocation'
                 dotNetHelper.invokeMethodAsync('UpdateRealLocation',
                     position.coords.latitude,
                     position.coords.longitude);
             },
             (error) => {
+                // Xử lý lỗi nếu không lấy được GPS
                 console.error("Lỗi lấy GPS: " + error.message);
                 alert("Không thể lấy GPS: " + error.message);
             },
             {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
+                enableHighAccuracy: true, // Cố gắng lấy tọa độ chính xác nhất
+                timeout: 10000, // Thời gian chờ tối đa là 10 giây
+                maximumAge: 0 // Không sử dụng dữ liệu GPS cũ
             }
         );
     } else {

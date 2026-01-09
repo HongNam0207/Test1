@@ -127,6 +127,7 @@
     {
         isRealGPS = true;
         AddLog("Yêu cầu quyền GPS thực tế...");
+        // Gọi đến Javascript để bắt đầu lấy vị trí thực tế
         await JS.InvokeVoidAsync("startGPSLocation", objRef);
     }
 
