@@ -2,12 +2,15 @@
 
 public class Trip
 {
-    public string Id { get; set; } = "";
-    public string RouteName { get; set; } = ""; // Tuyến đường
+    public int Id { get; set; }
+    public int VehicleId { get; set; }
+    public int DriverId { get; set; } // ID tài xế được phân công
+    public string Route { get; set; } // Tuyến đường
     public DateTime DepartureTime { get; set; } // Giờ xuất phát
+    public string Status { get; set; } // Scheduled, Departed, Completed, Cancelled
 
-    // Quan hệ với các Model khác
-    public Vehicle Bus { get; set; } = new();
-    public Staff Driver { get; set; } = new();
-    public List<TripSeat> Seats { get; set; } = new();
+    // Tích hợp GPS thời gian thực
+    public double? CurrentLat { get; set; }
+    public double? CurrentLng { get; set; }
+    public DateTime? LastGpsUpdate { get; set; }
 }

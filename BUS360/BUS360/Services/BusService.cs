@@ -1,50 +1,49 @@
 ﻿using BUS360.Model;
+using BUS360.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
-namespace BUS360.Services;
-
-public class BusService
+namespace BUS360.Services
 {
-    public Trip CurrentTrip { get; set; }
-
-    public BusService()
+    public class BusService
     {
-        // Khởi tạo dữ liệu mẫu cho chuyến xe
-        CurrentTrip = new Trip
-        {
-            Id = "TRIP-2026-001",
-            RouteName = "Hà Nội - Sapa (Cao tốc)",
-            DepartureTime = DateTime.Now.AddHours(3),
-            Bus = new Vehicle { PlateNumber = "29B-888.88", Type = "Limousine 9 Chỗ", Brand = "Ford" },
-            Driver = new Staff { FullName = "Nguyễn Văn Lái", PhoneNumber = "0912.345.678" }
-        };
+        private readonly IHubContext<BusHub> _hubContext;
+        private readonly List<TripSeat> _seats = new();
 
-        // Khởi tạo sơ đồ 9 ghế cho xe Limousine
-        for (int i = 1; i <= 9; i++)
+        public BusService(IHubContext<BusHub> hubContext)
         {
-            CurrentTrip.Seats.Add(new TripSeat { SeatNumber = "L" + i });
+            _hubContext = hubContext;
+            // Tạo dữ liệu mẫu
+            for (int i = 1; i <= 10; i++)
+            {
+                _seats.Add(new TripSeat { Id = i, TripId = 1, SeatNumber = "A" + i, Status = SeatStatus.Available });
+            }
         }
-    }
 
-    // Logic đặt vé: Cập nhật trạng thái ghế và thông tin khách hàng
-    public bool BookSeat(string seatNumber, Customer customer)
-    {
-        var seat = CurrentTrip.Seats.FirstOrDefault(s => s.SeatNumber == seatNumber);
-        if (seat != null && seat.Status == SeatStatus.Available)
+        public List<TripSeat> GetSeats(int tripId) => _seats.Where(s => s.TripId == tripId).ToList();
+
+        public async Task<bool> TryLockSeat(int tripId, string seatNumber, string userId)
         {
-            seat.Status = SeatStatus.Booked;
-            seat.Passenger = customer;
-            return true;
+            var seat = _seats.FirstOrDefault(s => s.TripId == tripId && s.SeatNumber == seatNumber);
+            if (seat != null && seat.Status == SeatStatus.Available)
+            {
+                seat.Status = SeatStatus.Pending;
+                // Gửi tín hiệu Real-time
+                await _hubContext.Clients.Group(tripId.ToString()).SendAsync("ReceiveSeatUpdate", seatNumber, "Pending");
+                return true;
+            }
+            return false;
         }
-        return false;
-    }
 
-    public void CancelSeat(string seatNumber)
-    {
-        var seat = CurrentTrip.Seats.FirstOrDefault(s => s.SeatNumber == seatNumber);
-        if (seat != null)
+        public async Task<bool> AddWalkInPassenger(int tripId, string seatNumber, Customer customer)
         {
-            seat.Status = SeatStatus.Available;
-            seat.Passenger = null;
+            var seat = _seats.FirstOrDefault(s => s.TripId == tripId && s.SeatNumber == seatNumber);
+            if (seat != null)
+            {
+                seat.Status = SeatStatus.Booked;
+                await _hubContext.Clients.Group(tripId.ToString()).SendAsync("ReceiveSeatUpdate", seatNumber, "Booked");
+                return true;
+            }
+            return false;
         }
     }
 }

@@ -2,8 +2,10 @@
 
 public class Vehicle
 {
-    public string PlateNumber { get; set; } = ""; // Biển số xe
-    public string Brand { get; set; } = ""; // Hãng xe (Thaco, Hyundai...)
-    public string Type { get; set; } = ""; // Ghế ngồi, Giường nằm, Limousine
-    public int Capacity { get; set; } // Tổng số ghế
+    public int Id { get; set; }
+    public string LicensePlate { get; set; } // Biển số xe
+    public string VehicleType { get; set; } // Ghế ngồi, giường nằm
+    public int Capacity { get; set; } // Số lượng ghế
+    public string Status { get; set; } // Hoạt động, Bảo trì, Ngưng hoạt động
+    public int CompanyId { get; set; }
 }

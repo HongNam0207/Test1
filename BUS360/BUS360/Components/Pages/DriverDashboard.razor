@@ -1,0 +1,56 @@
+﻿@page "/driver/{TripId:int}"
+@using BUS360.Model
+@using BUS360.Services
+@inject BusService BusService
+
+<div class="container mt-4">
+    <div class="alert alert-dark text-white shadow">
+        <h4 class="mb-0"><i class="bi bi-phone"></i> THIẾT BỊ TÀI XẾ - CHUYẾN #@TripId</h4>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white fw-bold">Thêm khách vãng lai (Dọc đường)</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Tên hành khách</label>
+                    <input @bind="PassengerName" class="form-control" placeholder="Nhập tên..." />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Số ghế</label>
+                    <input @bind="TargetSeat" class="form-control" placeholder="VD: A5" />
+                </div>
+            </div>
+            <button class="btn btn-success mt-3 w-100" @onclick="HandleAddPassenger">
+                XÁC NHẬN ĐÓN KHÁCH LÊN XE
+            </button>
+            @if (!string.IsNullOrEmpty(Feedback))
+            {
+                <div class="alert alert-info mt-3 py-2">@Feedback</div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int TripId { get; set; }
+    private string PassengerName = "";
+    private string TargetSeat = "";
+    private string Feedback = "";
+
+    private async Task HandleAddPassenger()
+    {
+        if (string.IsNullOrWhiteSpace(PassengerName) || string.IsNullOrWhiteSpace(TargetSeat)) return;
+
+        var result = await BusService.AddWalkInPassenger(TripId, TargetSeat.ToUpper(), new Customer
+        {
+            FullName = PassengerName,
+            PickupPoint = "Đón dọc đường"
+        });
+
+        Feedback = result ? $"✅ Đã ghi nhận khách {PassengerName} tại ghế {TargetSeat}"
+                          : "❌ Ghế không khả dụng!";
+
+        if (result) { PassengerName = ""; TargetSeat = ""; }
+    }
+}

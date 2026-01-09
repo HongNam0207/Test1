@@ -1,272 +1,103 @@
-﻿@page "/seat-map"
+﻿@page "/seat-map/{TripId:int}"
 @using BUS360.Model
 @using BUS360.Services
 @using Microsoft.AspNetCore.SignalR.Client
 @inject BusService BusService
 @inject NavigationManager Nav
 @implements IAsyncDisposable
-@rendermode InteractiveServer
 
-<div class="container-fluid bg-light text-dark min-vh-100 p-4">
-    <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm border">
-        <div>
-            <h4 class="mb-1 fw-bold text-primary">BUS360 REAL-TIME MONITORING</h4>
-            <small class="text-muted">
-                Chuyến: <b>@BusService.CurrentTrip.RouteName</b> |
-                Client ID: <span class="badge bg-secondary">@hub?.ConnectionId</span>
-            </small>
-        </div>
-        <div class="d-flex gap-3 align-items-center">
-            <div class="badge @(isOffline ? "bg-danger" : "bg-success") p-2 px-3 rounded-pill">
-                <i class="bi @(isOffline ? "bi-wifi-off" : "bi-wifi") me-1"></i>
-                @if (isOffline)
-                {
-                    <span>TRẠNG THÁI: NGOẠI TUYẾN</span>
-                }
-                else
-                {
-
-                    <span>TRẠNG THÁI: TRỰC TUYẾN</span>
-                }
-            </div>
-            <button class="btn btn-sm @(isOffline ? "btn-success" : "btn-outline-danger")" @onclick="ToggleNetwork">
-                @(isOffline ? "Khôi phục kết nối" : "Giả lập mất mạng")
-            </button>
-        </div>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Sơ đồ ghế - Chuyến #@TripId</h2>
+        <span class="badge bg-info p-2">Trạng thái: Real-time</span>
     </div>
 
-    <div class="row g-4">
-        <div class="col-md-8">
-            <div class="card bg-white border-0 shadow-sm">
-                <div class="card-header bg-white border-bottom fw-bold text-uppercase">Sơ đồ xe trực tuyến</div>
-                <div class="card-body d-flex flex-wrap justify-content-center gap-3 p-4" style="background-color: #f8f9fa; min-height: 350px;">
-                    @foreach (var seat in localSeats)
+    <div class="row">
+        <div class="col-md-7">
+            <div class="p-4 border rounded bg-light shadow-sm">
+                <div class="row row-cols-4 g-3 justify-content-center">
+                    @foreach (var seat in Seats)
                     {
-                        <div @onclick="() => SelectSeat(seat)"
-                             class="seat-box shadow-sm @(selectedSeat?.SeatNumber == seat.SeatNumber ? "active-seat" : "")"
-                             style="background-color: @GetSeatColor(seat)">
-                            <div class="fw-bold">@seat.SeatNumber</div>
-                            @if (seat.Status == SeatStatus.Booked)
-                            {
-                                <i class="bi bi-person-fill small"></i>
-                            }
+                        <div class="col text-center">
+                            <div @onclick="() => SelectSeat(seat)"
+                                 class="p-3 rounded border @GetSeatClass(seat)"
+                                 style="cursor: pointer; transition: 0.3s;">
+                                @seat.SeatNumber
+                            </div>
                         </div>
                     }
                 </div>
             </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="card bg-white border-0 shadow-sm h-100">
-                <div class="card-header bg-white border-bottom fw-bold text-uppercase">Bảng điều khiển</div>
-                <div class="card-body p-4">
-                    @if (selectedSeat != null)
-                    {
-                        <div class="alert alert-info p-2 small mb-3">Đang chọn ghế: <b>@selectedSeat.SeatNumber</b></div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold">Họ tên khách</label>
-                            <input class="form-control" @bind="inputName" />
-                        </div>
-
-                        @if (selectedSeat.Status == SeatStatus.Booked)
-                        {
-                            <button class="btn btn-danger w-100 py-2 fw-bold" @onclick="HandleCancel">HỦY ĐẶT GHẾ</button>
-                        }
-                        else
-                        {
-                            <button class="btn btn-primary w-100 py-2 fw-bold" @onclick="HandleBook">XÁC NHẬN GIỮ GHẾ</button>
-                        }
-                    }
-                    else
-                    {
-                        <div class="text-center text-muted mt-5 py-5 border rounded bg-light border-dashed">
-                            <i class="bi bi-cursor-fill fs-2 mb-2 d-block"></i>
-                            <p>Chọn ghế để thao tác</p>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 mt-2">
-            <div class="card bg-black border-0 shadow">
-                <div class="card-header bg-dark text-info py-1" style="font-size: 0.8rem;">
-                    <i class="bi bi-terminal me-2"></i>LOG STREAM - @(offlineQueue.Count > 0 ? $"Đang chờ đồng bộ: {offlineQueue.Count}" : "Đã đồng bộ")
-                </div>
-                <div class="card-body p-2" style="height: 200px; overflow-y: auto; background-color: #0c0c0c; font-family: monospace;">
-                    @foreach (var log in logs.AsEnumerable().Reverse())
-                    {
-                        <div class="mb-1 border-bottom border-dark pb-1" style="font-size: 0.8rem;">
-                            <span class="text-secondary">[@log.Timestamp.ToString("HH:mm:ss")]</span>
-                            <span class="badge @GetBadgeClass(log.Source) mx-2">@log.Source</span>
-                            <span class="text-light">@log.Message</span>
-                        </div>
-                    }
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Chú thích trạng thái</h5>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="p-3 bg-white border me-2 rounded"></div> <span>Ghế trống</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="p-3 bg-warning me-2 rounded"></div> <span>Đang chờ thanh toán (Pending)</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="p-3 bg-danger me-2 rounded"></div> <span>Đã có khách (Booked)</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    .seat-box {
-        width: 65px;
-        height: 65px;
-        border-radius: 12px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        border: 2px solid #dee2e6;
-        transition: all 0.2s;
-        background: white;
-    }
-
-        .seat-box:hover {
-            transform: translateY(-3px);
-            border-color: #0d6efd;
-        }
-
-    .active-seat {
-        border: 3px solid #0d6efd !important;
-        background-color: #f0f7ff !important;
-    }
-
-    .border-dashed {
-        border-style: dashed !important;
-    }
-</style>
-
 @code {
-    private List<ProcessLog> logs = new();
-    private List<SyncLog> offlineQueue = new();
-    private List<TripSeat> localSeats = new(); // BẢN SAO DỮ LIỆU RIÊNG CHO MỖI TAB
-    private HubConnection? hub;
-    private TripSeat? selectedSeat;
-    private string inputName = "";
-    private string inputPhone = "";
-    private bool isOffline = false;
+    [Parameter] public int TripId { get; set; }
+    private List<TripSeat> Seats = new();
+    private HubConnection? hubConnection;
 
     protected override async Task OnInitializedAsync()
     {
-        // Bước 1: Copy dữ liệu từ Service Singleton vào bản sao Local của tab này
-        localSeats = BusService.CurrentTrip.Seats.Select(s => new TripSeat
-        {
-            SeatNumber = s.SeatNumber,
-            Status = s.Status,
-            Passenger = s.Passenger != null ? new Customer { FullName = s.Passenger.FullName } : null
-        }).ToList();
+        Seats = BusService.GetSeats(TripId);
 
-        AddLog("SYSTEM", "Đã tải sơ đồ xe vào bộ nhớ cục bộ.", "info");
-
-        hub = new HubConnectionBuilder()
+        hubConnection = new HubConnectionBuilder()
             .WithUrl(Nav.ToAbsoluteUri("/bushub"))
-            .WithAutomaticReconnect()
             .Build();
 
-        hub.On<string, string>("ReceiveSeatUpdate", (no, status) =>
+        hubConnection.On<string, string>("ReceiveSeatUpdate", (seatNumber, status) =>
         {
-            // Khi tab khác cập nhật, ta cập nhật cả localSeats và Singleton Service
-            var localSeat = localSeats.FirstOrDefault(s => s.SeatNumber == no);
-            if (localSeat != null)
+            var seat = Seats.FirstOrDefault(s => s.SeatNumber == seatNumber);
+            if (seat != null)
             {
-                localSeat.Status = status == "Booked" ? SeatStatus.Booked : SeatStatus.Available;
-                AddLog("REMOTE-CLIENT", $"Ghế {no} vừa đổi trạng thái thành {status}", "warning");
+                if (Enum.TryParse<SeatStatus>(status, out var newStatus))
+                {
+                    seat.Status = newStatus;
+                }
                 InvokeAsync(StateHasChanged);
             }
         });
 
-        await hub.StartAsync();
+        await hubConnection.StartAsync();
+        await hubConnection.SendAsync("JoinTrip", TripId);
     }
 
-    private void AddLog(string src, string msg, string type)
+    private async Task SelectSeat(TripSeat seat)
     {
-        logs.Add(new ProcessLog { Source = src, Message = msg, Type = type, Timestamp = DateTime.Now });
-        InvokeAsync(StateHasChanged);
-    }
-
-    private async Task HandleBook()
-    {
-        if (selectedSeat == null) return;
-
-        if (isOffline)
+        if (seat.Status == SeatStatus.Available)
         {
-            // CHỈ cập nhật bản sao local của tab này -> Tab khác sẽ không thấy
-            selectedSeat.Status = SeatStatus.Booked;
-            offlineQueue.Add(new SyncLog { SeatNumber = selectedSeat.SeatNumber, NewStatus = SeatStatus.Booked });
-            AddLog("LOCAL-DB", $"[OFFLINE] Đã đặt tạm ghế {selectedSeat.SeatNumber}.", "danger");
-        }
-        else
-        {
-            // ONLINE: Cập nhật Service thật và báo cho mọi người
-            if (BusService.BookSeat(selectedSeat.SeatNumber, new Customer { FullName = inputName }))
-            {
-                selectedSeat.Status = SeatStatus.Booked;
-                await hub!.SendAsync("NotifySeatUpdate", selectedSeat.SeatNumber, "Booked");
-                AddLog("SIGNALR-HUB", $"Đã xác nhận đặt ghế {selectedSeat.SeatNumber}.", "success");
-            }
+            await BusService.TryLockSeat(TripId, seat.SeatNumber, "Staff_User_Test");
         }
     }
 
-    private async Task HandleCancel()
+    private string GetSeatClass(TripSeat seat) => seat.Status switch
     {
-        if (selectedSeat == null) return;
-
-        if (isOffline)
-        {
-            // CHỈ cập nhật bản sao local -> Tab khác không thấy
-            selectedSeat.Status = SeatStatus.Available;
-            offlineQueue.Add(new SyncLog { SeatNumber = selectedSeat.SeatNumber, NewStatus = SeatStatus.Available });
-            AddLog("LOCAL-DB", $"[OFFLINE] Đã hủy tạm ghế {selectedSeat.SeatNumber}.", "danger");
-        }
-        else
-        {
-            BusService.CancelSeat(selectedSeat.SeatNumber);
-            selectedSeat.Status = SeatStatus.Available;
-            await hub!.SendAsync("NotifySeatUpdate", selectedSeat.SeatNumber, "Available");
-            AddLog("SIGNALR-HUB", $"Đã hủy ghế {selectedSeat.SeatNumber} trên toàn hệ thống.", "success");
-        }
-    }
-
-    private async Task ToggleNetwork()
-    {
-        isOffline = !isOffline;
-        AddLog("SYSTEM", isOffline ? "Đã ngắt kết nối giả lập." : "Đã nối mạng lại.", isOffline ? "danger" : "success");
-
-        if (!isOffline && offlineQueue.Any())
-        {
-            AddLog("SYNC-SERVICE", $"Đang đẩy {offlineQueue.Count} thay đổi lên Server...", "info");
-            foreach (var item in offlineQueue.ToList())
-            {
-                await Task.Delay(500);
-                // Cập nhật Service thật khi Online lại
-                if (item.NewStatus == SeatStatus.Booked)
-                    BusService.BookSeat(item.SeatNumber, new Customer { FullName = "Offline User" });
-                else
-                    BusService.CancelSeat(item.SeatNumber);
-
-                await hub!.SendAsync("NotifySeatUpdate", item.SeatNumber, item.NewStatus.ToString());
-                offlineQueue.Remove(item);
-                AddLog("SYNC-SERVICE", $"Đã đồng bộ ghế {item.SeatNumber}", "success");
-                StateHasChanged();
-            }
-        }
-    }
-
-    private void SelectSeat(TripSeat seat) => selectedSeat = seat;
-
-    private string GetSeatColor(TripSeat s) => s.Status == SeatStatus.Booked ? "#198754" : "#ffffff";
-
-    private string GetBadgeClass(string src) => src switch
-    {
-        "LOCAL-USER" => "bg-primary",
-        "REMOTE-CLIENT" => "bg-warning text-dark",
-        "SYSTEM" => "bg-secondary",
-        "SIGNALR-HUB" => "bg-info text-dark",
-        "SYNC-SERVICE" => "bg-success",
-        _ => "bg-danger"
+        SeatStatus.Booked => "bg-danger text-white border-danger shadow-sm",
+        SeatStatus.Pending => "bg-warning text-dark border-warning",
+        _ => "bg-white text-dark hover-shadow"
     };
 
-    public async ValueTask DisposeAsync() { if (hub is not null) await hub.DisposeAsync(); }
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
 }
