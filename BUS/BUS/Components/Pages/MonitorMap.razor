@@ -14,7 +14,7 @@
 
     <div class="row">
         <div class="col-md-9">
-            @* Luôn bọc bản đồ trong một div có ID cố định *@
+            @* Bản đồ được bọc trong một div có ID cố định *@
             <div id="map" style="height: 650px; width: 100%; background: #f8f9fa;" class="border shadow rounded"></div>
         </div>
 
@@ -53,6 +53,7 @@
 @code {
     private string TabId = Guid.NewGuid().ToString().Substring(0, 8);
     private HubConnection? hubConnection;
+    private Dictionary<int, string> tripStatus = new();  // Để lưu trạng thái các chuyến đi
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -63,28 +64,40 @@
                 // 1. Khởi tạo bản đồ
                 await JS.InvokeVoidAsync("initMap", 21.0285, 105.8542);
 
-                // 2. Cấu hình Hub
+                // 2. Thiết lập SignalR
                 hubConnection = new HubConnectionBuilder()
                     .WithUrl(Nav.ToAbsoluteUri("/triphub"))
                     .WithAutomaticReconnect()
                     .Build();
 
-                // 3. Xử lý nhận GPS (Sửa lỗi Dispatcher Thread)
+                // 3. Lắng nghe tọa độ GPS từ server
                 hubConnection.On<int, double, double>("ReceiveGps", async (tripId, lat, lng) =>
                 {
+                    // Tìm chuyến đi theo tripId
                     var trip = Data.Trips.FirstOrDefault(t => t.Id == tripId);
-                    string name = trip?.RouteName ?? "Unknown";
+                    string routeName = trip?.RouteName ?? "Unknown";
 
-                    // QUAN TRỌNG: Mọi cập nhật UI/JS từ SignalR phải bọc trong InvokeAsync
+                    // Cập nhật vị trí xe và trạng thái
                     await InvokeAsync(async () =>
                     {
-                        await JS.InvokeVoidAsync("updateMultiBusLocation", tripId, lat, lng, name);
+                        await JS.InvokeVoidAsync("updateMultiBusLocation", tripId, lat, lng, routeName);
+                        tripStatus[tripId] = "Đang di chuyển";  // Cập nhật trạng thái chuyến đi
                         StateHasChanged();
                     });
                 });
 
-                await hubConnection.StartAsync();
-                await InvokeAsync(StateHasChanged); // Cập nhật trạng thái "Connected" lên màn hình
+                // 4. Lắng nghe cập nhật trạng thái ghế
+                hubConnection.On<int, string, string>("ReceiveSeatUpdate", (id, seatNo, status) =>
+                {
+                    // Cập nhật trạng thái ghế
+                    InvokeAsync(() =>
+                    {
+                        tripStatus[id] = $"Ghế {seatNo} {status}";
+                        StateHasChanged();
+                    });
+                });
+
+                await Connect();
             }
             catch (Exception ex)
             {
@@ -93,9 +106,33 @@
         }
     }
 
+    private async Task Connect()
+    {
+        if (hubConnection != null && hubConnection.State == HubConnectionState.Disconnected)
+        {
+            try
+            {
+                await hubConnection.StartAsync();
+                Console.WriteLine("Kết nối SignalR thành công");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi kết nối: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task Disconnect()
+    {
+        if (hubConnection != null && hubConnection.State != HubConnectionState.Disconnected)
+        {
+            await hubConnection.StopAsync();
+            Console.WriteLine("Đã ngắt kết nối SignalR");
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
-        // QUAN TRỌNG: Kiểm tra null để tránh lỗi NullReferenceException (Hình image_f0bcba.png)
         if (hubConnection is not null)
         {
             await hubConnection.DisposeAsync();
