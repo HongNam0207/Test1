@@ -1,37 +1,23 @@
 ﻿@page "/"
 @inject NavigationManager Nav
 
-<PageTitle>BUS360 - Quản lý nhà xe</PageTitle>
+<div class="container text-center mt-5">
+    <h1 class="text-primary">BUS360 - HỆ THỐNG ĐIỀU HÀNH</h1>
 
-<div class="container mt-5">
-    <div class="text-center mb-5">
-        <h1 class="display-4 fw-bold text-primary">Hệ thống BUS360</h1>
-        <p class="lead">Nền tảng quản lý vận hành và điều phối thời gian thực</p>
-    </div>
-
-    <div class="row g-4">
+    <div class="row mt-5">
         <div class="col-md-6">
-            <div class="card h-100 shadow-sm border-primary">
-                <div class="card-body text-center">
-                    <i class="bi bi-person-badge display-1 text-primary"></i>
-                    <h3 class="card-title mt-3">Khách hàng & CSKH</h3>
-                    <p>Chọn ghế, đặt vé trực tuyến và theo dõi hành trình xe.</p>
-                    <button class="btn btn-primary btn-lg" @onclick='() => Nav.NavigateTo("/seat-map/1")'>
-                        Vào Sơ đồ ghế
-                    </button>
-                </div>
+            <div class="card shadow p-4">
+                <h3>Khách hàng / CSKH</h3>
+                <p>Xem sơ đồ ghế thực tế</p>
+                <a href="/seat-map/1" class="btn btn-primary btn-lg">Vào Sơ đồ ghế (Trip 1)</a>
             </div>
         </div>
+
         <div class="col-md-6">
-            <div class="card h-100 shadow-sm border-success">
-                <div class="card-body text-center">
-                    <i class="bi bi-truck display-1 text-success"></i>
-                    <h3 class="card-title mt-3">Giao diện Tài xế</h3>
-                    <p>Cập nhật trạng thái chuyến đi và đón khách vãng lai.</p>
-                    <button class="btn btn-success btn-lg" @onclick='() => Nav.NavigateTo("/driver/1")'>
-                        Vào Dashboard Tài xế
-                    </button>
-                </div>
+            <div class="card shadow p-4">
+                <h3>Tài xế</h3>
+                <p>Cập nhật chuyến đi</p>
+                <a href="/driver/1" class="btn btn-success btn-lg">Vào Dashboard Tài xế (Trip 1)</a>
             </div>
         </div>
     </div>
