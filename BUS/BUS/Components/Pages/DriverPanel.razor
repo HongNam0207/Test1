@@ -55,8 +55,7 @@
                 @foreach (var seat in Data.GetSeatsByTrip(currentTrip.Id))
                 {
                     <button class="btn @(seat.Status == SeatStatus.Sold ? "btn-warning" : "btn-outline-secondary")"
-                            @onclick='() => ConfirmSeat(seat.SeatNumber)'
-                            disabled="@(hubConnection?.State != HubConnectionState.Connected)">
+                            @onclick='() => ConfirmSeat(seat.SeatNumber)'>
                         @seat.SeatNumber
                     </button>
                 }
