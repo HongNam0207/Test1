@@ -1,0 +1,70 @@
+﻿@page "/driver"
+@using Microsoft.AspNetCore.SignalR.Client
+@using BUS.Model
+@inject BUS.Services.BusDataService Data
+@inject NavigationManager Nav
+@implements IAsyncDisposable
+
+<div class="container mt-4">
+    <h3 class="alert alert-primary">Bảng điều khiển Tài xế</h3>
+
+    @if (currentTrip != null)
+    {
+        <div class="card p-3 shadow-sm">
+            <h5>Chuyến: @currentTrip.RouteName</h5>
+            <p>Trạng thái: <strong>@currentTrip.Status</strong></p>
+            <p>Vị trí hiện tại: @currentTrip.CurrentLatitude, @currentTrip.CurrentLongitude</p>
+
+            <div class="d-flex gap-2 mb-4">
+                <button class="btn btn-success" @onclick="SimulateMove">Phát GPS (Di chuyển giả lập)</button>
+                <button class="btn btn-danger" @onclick="StopTrip">Kết thúc chuyến</button>
+            </div>
+
+            <h6>Danh sách ghế (Xác nhận khách lên xe):</h6>
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var seat in Data.GetSeatsByTrip(currentTrip.Id))
+                {
+                    <button class="btn @(seat.Status == SeatStatus.Sold ? "btn-warning" : "btn-outline-secondary")"
+                            @onclick='() => ConfirmSeat(seat.SeatNumber)'>
+                        @seat.SeatNumber
+                    </button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Trip? currentTrip;
+    private HubConnection? hubConnection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentTrip = Data.Trips.FirstOrDefault();
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Nav.ToAbsoluteUri("/triphub"))
+            .Build();
+        await hubConnection.StartAsync();
+    }
+
+    private async Task SimulateMove()
+    {
+        // Giả lập di chuyển bằng cách cộng thêm một chút tọa độ
+        if (currentTrip != null)
+        {
+            currentTrip.CurrentLatitude += 0.001;
+            currentTrip.CurrentLongitude += 0.001;
+            await hubConnection!.SendAsync("SendLocation", currentTrip.Id, currentTrip.CurrentLatitude, currentTrip.CurrentLongitude);
+        }
+    }
+
+    private async Task ConfirmSeat(string seatNo)
+    {
+        await hubConnection!.SendAsync("UpdateSeatStatus", currentTrip!.Id, seatNo);
+    }
+
+    private void StopTrip() => currentTrip!.Status = TripStatus.Completed;
+
+    public async ValueTask DisposeAsync() => await hubConnection!.DisposeAsync();
+}

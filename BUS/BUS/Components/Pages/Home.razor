@@ -1,0 +1,59 @@
+﻿@page "/"
+@inject NavigationManager Nav
+
+<PageTitle>BUS360 - Hệ thống quản lý nhà xe</PageTitle>
+
+<div class="container mt-5">
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold text-primary">BUS360</h1>
+        <p class="lead">Nền tảng Quản lý & Điều phối Chuyến đi Real-time</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body text-center">
+                    <div class="display-5 mb-3">🚛</div>
+                    <h3 class="card-title">Tài xế</h3>
+                    <p class="card-text text-muted">Cập nhật tọa độ GPS, trạng thái chuyến đi và xác nhận khách lên xe.</p>
+                    <button class="btn btn-primary w-100" @onclick='() => Nav.NavigateTo("/driver")'>Vào bảng điều khiển</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-body text-center">
+                    <div class="display-5 mb-3">🎫</div>
+                    <h3 class="card-title">Khách hàng</h3>
+                    <p class="card-text text-muted">Tra cứu chuyến đi, chọn ghế ngồi real-time và theo dõi vị trí xe trên bản đồ.</p>
+                    <button class="btn btn-success w-100" @onclick='() => Nav.NavigateTo("/booking")'>Đặt vé ngay</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-warning">
+                <div class="card-body text-center">
+                    <div class="display-5 mb-3">🎧</div>
+                    <h3 class="card-title">Điều phối / CSKH</h3>
+                    <p class="card-text text-muted">Giám sát toàn bộ đội xe, xử lý sự cố và báo cáo doanh thu vận hành.</p>
+                    <button class="btn btn-warning w-100" @onclick='() => Nav.NavigateTo("/monitor")'>Hệ thống giám sát</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-5 p-4 bg-light rounded border">
+        <h5>Ghi chú kỹ thuật (PoC):</h5>
+        <ul>
+            <li>Hệ thống đang chạy dữ liệu <strong>In-Memory</strong> (không DB).</li>
+            <li>Kết nối Real-time qua <strong>SignalR</strong> đã sẵn sàng.</li>
+            <li>GPS tích hợp <strong>Leaflet JS</strong>.</li>
+        </ul>
+    </div>
+</div>
+
+@code {
+    // Logic điều hướng đơn giản bằng NavigationManager
+}

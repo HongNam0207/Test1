@@ -1,0 +1,80 @@
+﻿@page "/booking"
+@using Microsoft.AspNetCore.SignalR.Client
+@using BUS.Model 
+@inject BUS.Services.BusDataService Data
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Chọn ghế - Tuyến: Hà Nội - Hải Phòng</h3>
+            <div class="grid-container" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                @foreach (var seat in Data.GetSeatsByTrip(1))
+                {
+                    @* Kiểm tra SeatStatus.Sold *@
+                    <div class="p-3 border text-center @(seat.Status == SeatStatus.Sold ? "bg-danger text-white" : "bg-light")"
+                         style="cursor: pointer" @onclick='() => Book(seat.SeatNumber)'>
+                        @seat.SeatNumber
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h3>Vị trí xe hiện tại</h3>
+            <div id="map" style="height: 400px; width: 100%;" class="border"></div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private HubConnection? hubConnection;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Khởi tạo bản đồ
+            await JS.InvokeVoidAsync("initMap", 21.0285, 105.8542);
+
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl(Nav.ToAbsoluteUri("/triphub"))
+                .WithAutomaticReconnect() // Tự động kết nối lại nếu mất mạng
+                .Build();
+
+            // Cập nhật GPS: Phải bọc trong InvokeAsync
+            hubConnection.On<int, double, double>("ReceiveGps", async (id, lat, lng) =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await JS.InvokeVoidAsync("updateBusLocation", lat, lng);
+                });
+            });
+
+            // Cập nhật trạng thái ghế: Phải bọc trong InvokeAsync để sửa lỗi Thread
+            hubConnection.On<int, string, string>("ReceiveSeatUpdate", async (id, seatNo, status) =>
+            {
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await hubConnection.StartAsync();
+        }
+    }
+
+    private async Task Book(string seatNo)
+    {
+        if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
+        {
+            await hubConnection.SendAsync("UpdateSeatStatus", 1, seatNo);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
