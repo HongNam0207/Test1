@@ -1,77 +1,161 @@
 ﻿@page "/booking"
 @using Microsoft.AspNetCore.SignalR.Client
-@using BUS.Model 
+@using BUS.Model
 @inject BUS.Services.BusDataService Data
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
 <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Đặt vé & Theo dõi xe</h3>
+        <span class="badge bg-secondary">Tab ID: @TabId</span>
+    </div>
+
     <div class="row">
         <div class="col-md-6">
-            <h3>Chọn ghế - Tuyến: Hà Nội - Hải Phòng</h3>
-            <div class="grid-container" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-                @foreach (var seat in Data.GetSeatsByTrip(1))
-                {
-                    @* Kiểm tra SeatStatus.Sold *@
-                    <div class="p-3 border text-center @(seat.Status == SeatStatus.Sold ? "bg-danger text-white" : "bg-light")"
-                         style="cursor: pointer" @onclick='() => Book(seat.SeatNumber)'>
-                        @seat.SeatNumber
-                    </div>
-                }
+            <div class="card p-3 mb-3 shadow-sm">
+                <h6>
+                    Trạng thái mạng:
+                    <span class="@(hubConnection?.State == HubConnectionState.Connected ? "text-success fw-bold" : "text-danger fw-bold")">
+                        @hubConnection?.State
+                    </span>
+                </h6>
+
+                <div class="mb-3 d-flex gap-2">
+                    @if (hubConnection?.State == HubConnectionState.Disconnected)
+                    {
+                        <button class="btn btn-sm btn-success" @onclick="Connect">Kết nối lại mạng</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="Disconnect">Mô phỏng Mất mạng</button>
+                    }
+                </div>
+
+                <h6>Sơ đồ ghế:</h6>
+                <div class="grid-container" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                    @foreach (var seat in Data.GetSeatsByTrip(1))
+                    {
+                        <div class="p-2 border text-center @(seat.Status == SeatStatus.Sold ? "bg-danger text-white" : "bg-light")"
+                             style="cursor: pointer; border-radius: 5px;"
+                             @onclick='() => Book(seat.SeatNumber)'>
+                            @seat.SeatNumber
+                        </div>
+                    }
+                </div>
             </div>
         </div>
+
         <div class="col-md-6">
-            <h3>Vị trí xe hiện tại</h3>
-            <div id="map" style="height: 400px; width: 100%;" class="border"></div>
+            <div class="card p-3 shadow-sm">
+                <h6>Vị trí xe Bus (Real-time):</h6>
+                <div id="map" style="height: 300px; width: 100%; border-radius: 5px;" class="border"></div>
+            </div>
         </div>
+    </div>
+
+    <h6 class="mt-4">Nhật ký hệ thống (Logs):</h6>
+    <div class="log-container" style="height: 150px; overflow-y: auto; background: #212529; color: #00ff00; padding: 10px; font-family: monospace; border-radius: 5px;">
+        @foreach (var log in logs)
+        {
+            <div style="border-bottom: 1px solid #333; font-size: 0.85rem;">
+                <span class="text-info">[@DateTime.Now.ToString("HH:mm:ss")]</span> @log
+            </div>
+        }
     </div>
 </div>
 
 @code {
+    private string TabId = Guid.NewGuid().ToString().Substring(0, 8);
+    private List<string> logs = new();
     private HubConnection? hubConnection;
+
+    // Hàm ghi Log an toàn từ bất kỳ luồng nào
+    private void AddLog(string msg)
+    {
+        logs.Insert(0, $"[Tab {TabId}] {msg}");
+        InvokeAsync(StateHasChanged);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Khởi tạo bản đồ
+            // 1. Khởi tạo bản đồ qua JS
             await JS.InvokeVoidAsync("initMap", 21.0285, 105.8542);
 
+            // 2. Thiết lập SignalR
             hubConnection = new HubConnectionBuilder()
                 .WithUrl(Nav.ToAbsoluteUri("/triphub"))
-                .WithAutomaticReconnect() // Tự động kết nối lại nếu mất mạng
+                .WithAutomaticReconnect()
                 .Build();
 
-            // Cập nhật GPS: Phải bọc trong InvokeAsync
+            // 3. Lắng nghe tọa độ GPS
             hubConnection.On<int, double, double>("ReceiveGps", async (id, lat, lng) =>
             {
+                AddLog($"Nhận GPS mới: {lat}, {lng}");
+                // Fix lỗi Threading cho JS
                 await InvokeAsync(async () =>
                 {
                     await JS.InvokeVoidAsync("updateBusLocation", lat, lng);
                 });
             });
 
-            // Cập nhật trạng thái ghế: Phải bọc trong InvokeAsync để sửa lỗi Thread
+            // 4. Lắng nghe cập nhật ghế
             hubConnection.On<int, string, string>("ReceiveSeatUpdate", async (id, seatNo, status) =>
             {
+                AddLog($"Cập nhật: Ghế {seatNo} -> {status}");
+                // Fix lỗi InvalidOperationException (Dispatcher)
                 await InvokeAsync(StateHasChanged);
             });
 
-            await hubConnection.StartAsync();
+            // 5. Bắt đầu kết nối
+            await Connect();
+        }
+    }
+
+    private async Task Connect()
+    {
+        if (hubConnection is not null && hubConnection.State == HubConnectionState.Disconnected)
+        {
+            try
+            {
+                await hubConnection.StartAsync();
+                AddLog("Đã kết nối mạng.");
+            }
+            catch (Exception ex)
+            {
+                AddLog($"Lỗi kết nối: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task Disconnect()
+    {
+        if (hubConnection is not null && hubConnection.State != HubConnectionState.Disconnected)
+        {
+            await hubConnection.StopAsync();
+            AddLog("Đã ngắt kết nối mạng (Giả lập).");
         }
     }
 
     private async Task Book(string seatNo)
     {
-        if (hubConnection is not null && hubConnection.State == HubConnectionState.Connected)
+        if (hubConnection?.State == HubConnectionState.Connected)
         {
+            AddLog($"Đang gửi yêu cầu đặt ghế {seatNo}...");
             await hubConnection.SendAsync("UpdateSeatStatus", 1, seatNo);
+        }
+        else
+        {
+            AddLog("Lỗi: Không thể đặt ghế khi mất kết nối!");
         }
     }
 
     public async ValueTask DisposeAsync()
     {
+        // Fix lỗi NullReferenceException
         if (hubConnection is not null)
         {
             await hubConnection.DisposeAsync();

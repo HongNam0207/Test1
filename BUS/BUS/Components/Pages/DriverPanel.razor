@@ -3,68 +3,168 @@
 @using BUS.Model
 @inject BUS.Services.BusDataService Data
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 @implements IAsyncDisposable
 
 <div class="container mt-4">
-    <h3 class="alert alert-primary">Bảng điều khiển Tài xế</h3>
+    <div class="d-flex justify-content-between align-items-center alert alert-primary">
+        <h3>Bảng điều khiển Tài xế</h3>
+        <div class="text-end">
+            <span class="badge bg-dark">Tab ID: @TabId</span><br />
+            <small class="text-muted">Chế độ: @(isRealGPS ? "GPS Thực tế" : "GPS Giả lập")</small>
+        </div>
+    </div>
 
     @if (currentTrip != null)
     {
-        <div class="card p-3 shadow-sm">
-            <h5>Chuyến: @currentTrip.RouteName</h5>
-            <p>Trạng thái: <strong>@currentTrip.Status</strong></p>
-            <p>Vị trí hiện tại: @currentTrip.CurrentLatitude, @currentTrip.CurrentLongitude</p>
+        <div class="card p-3 shadow-sm mb-3">
+            <h5>
+                Chuyến: @currentTrip.RouteName |
+                <span class="@(hubConnection?.State == HubConnectionState.Connected ? "text-success" : "text-danger")">
+                    @hubConnection?.State
+                </span>
+            </h5>
 
-            <div class="d-flex gap-2 mb-4">
-                <button class="btn btn-success" @onclick="SimulateMove">Phát GPS (Di chuyển giả lập)</button>
-                <button class="btn btn-danger" @onclick="StopTrip">Kết thúc chuyến</button>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @if (hubConnection?.State == HubConnectionState.Disconnected)
+                {
+                    <button class="btn btn-outline-success" @onclick="Connect">Kết nối mạng</button>
+                }
+                else
+                {
+                    <button class="btn btn-outline-danger" @onclick="Disconnect">Ngắt mạng (Test)</button>
+                }
+
+                @if (!isRealGPS)
+                {
+                    <button class="btn btn-primary" @onclick="SimulateMove" disabled="@(hubConnection?.State != HubConnectionState.Connected)">
+                        Phát GPS (Giả lập +0.001)
+                    </button>
+                    <button class="btn btn-warning" @onclick="EnableRealGPS" disabled="@(hubConnection?.State != HubConnectionState.Connected)">
+                        📍 Bật GPS Thực tế
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-secondary" disabled>🛰️ Đang lấy GPS từ thiết bị...</button>
+                }
             </div>
 
-            <h6>Danh sách ghế (Xác nhận khách lên xe):</h6>
+            <h6>Xác nhận khách lên xe:</h6>
             <div class="d-flex flex-wrap gap-2">
                 @foreach (var seat in Data.GetSeatsByTrip(currentTrip.Id))
                 {
                     <button class="btn @(seat.Status == SeatStatus.Sold ? "btn-warning" : "btn-outline-secondary")"
-                            @onclick='() => ConfirmSeat(seat.SeatNumber)'>
+                            @onclick='() => ConfirmSeat(seat.SeatNumber)'
+                            disabled="@(hubConnection?.State != HubConnectionState.Connected)">
                         @seat.SeatNumber
                     </button>
                 }
             </div>
         </div>
     }
+
+    <h6>Logs hệ thống:</h6>
+    <div class="log-container" style="height: 150px; overflow-y: auto; background: #212529; color: #00ff00; padding: 10px; font-family: monospace; border-radius: 5px;">
+        @foreach (var log in logs)
+        {
+            <div style="border-bottom: 1px solid #333; font-size: 0.85rem;">
+                <span class="text-info">[@DateTime.Now.ToString("HH:mm:ss")]</span> @log
+            </div>
+        }
+    </div>
 </div>
 
 @code {
+    private string TabId = Guid.NewGuid().ToString().Substring(0, 8);
+    private List<string> logs = new();
     private Trip? currentTrip;
     private HubConnection? hubConnection;
+    private DotNetObjectReference<DriverPanel>? objRef;
+    private bool isRealGPS = false;
+
+    private void AddLog(string msg)
+    {
+        logs.Insert(0, msg);
+        InvokeAsync(StateHasChanged);
+    }
 
     protected override async Task OnInitializedAsync()
     {
         currentTrip = Data.Trips.FirstOrDefault();
-
         hubConnection = new HubConnectionBuilder()
             .WithUrl(Nav.ToAbsoluteUri("/triphub"))
+            .WithAutomaticReconnect()
             .Build();
-        await hubConnection.StartAsync();
+
+        objRef = DotNetObjectReference.Create(this);
+        await Connect();
+    }
+
+    private async Task Connect()
+    {
+        try
+        {
+            if (hubConnection?.State == HubConnectionState.Disconnected)
+            {
+                await hubConnection.StartAsync();
+                AddLog("Đã kết nối Hub.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Lỗi: {ex.Message}");
+        }
+    }
+
+    private async Task Disconnect()
+    {
+        await hubConnection!.StopAsync();
+        AddLog("Đã ngắt kết nối.");
+    }
+
+    // GỌI GPS THỰC TẾ
+    private async Task EnableRealGPS()
+    {
+        isRealGPS = true;
+        AddLog("Yêu cầu quyền GPS thực tế...");
+        await JS.InvokeVoidAsync("startGPSLocation", objRef);
+    }
+
+    // NHẬN TỌA ĐỘ TỪ JAVASCRIPT
+    [JSInvokable]
+    public async Task UpdateRealLocation(double lat, double lng)
+    {
+        if (currentTrip != null && hubConnection?.State == HubConnectionState.Connected)
+        {
+            currentTrip.CurrentLatitude = lat;
+            currentTrip.CurrentLongitude = lng;
+
+            await hubConnection.SendAsync("SendLocation", currentTrip.Id, lat, lng);
+            AddLog($"📡 GPS Thực tế: {lat:F5}, {lng:F5}");
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task SimulateMove()
     {
-        // Giả lập di chuyển bằng cách cộng thêm một chút tọa độ
-        if (currentTrip != null)
-        {
-            currentTrip.CurrentLatitude += 0.001;
-            currentTrip.CurrentLongitude += 0.001;
-            await hubConnection!.SendAsync("SendLocation", currentTrip.Id, currentTrip.CurrentLatitude, currentTrip.CurrentLongitude);
-        }
+        currentTrip!.CurrentLatitude += 0.001;
+        await hubConnection!.SendAsync("SendLocation", currentTrip.Id, currentTrip.CurrentLatitude, currentTrip.CurrentLongitude);
+        AddLog($"🚜 GPS Giả lập: {currentTrip.CurrentLatitude:F5}");
     }
 
     private async Task ConfirmSeat(string seatNo)
     {
         await hubConnection!.SendAsync("UpdateSeatStatus", currentTrip!.Id, seatNo);
+        AddLog($"✅ Xác nhận ghế {seatNo}");
     }
 
-    private void StopTrip() => currentTrip!.Status = TripStatus.Completed;
-
-    public async ValueTask DisposeAsync() => await hubConnection!.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        objRef?.Dispose();
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
 }
